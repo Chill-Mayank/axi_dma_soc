@@ -1,0 +1,14 @@
+sim/out/
+obj_dir/
+xcelium.d/
+waves.shm/
+.simvision/
+
+# Log Files and Tools History:
+*.log
+*.history
+*.key
+
+# My Mac Junk and my Setting
+.DS_Store
+.vscode/
