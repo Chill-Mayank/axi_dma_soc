@@ -50,7 +50,13 @@ module dma_fifo #(
     always_ff @(posedge clk) begin
       if (do_write) mem[wr_ptr[AW-1:0]] <= wr_data;   // lower 4 bits = slot number
     end
-    
+
+      // ---------------- Outputs: flags, count, oldest item ----------------
+  assign empty   = (wr_ptr == rd_ptr);                     // same slot, same lap
+  assign full    = (wr_ptr[AW-1:0] == rd_ptr[AW-1:0]) &&   // same slot ...
+                   (wr_ptr[AW]     != rd_ptr[AW]);         // ... different lap
+  assign count   = wr_ptr - rd_ptr;                        // items inside
+  assign rd_data = mem[rd_ptr[AW-1:0]];                    // oldest item, no waiting
 
 
 endmodule
