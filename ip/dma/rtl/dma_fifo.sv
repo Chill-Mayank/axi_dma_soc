@@ -24,7 +24,7 @@ module dma_fifo #(
 
 );
     // storage and pointers
-    
+
     localparam int AW = $clog2(DEPTH); // slot number bits: 16 slots -> 4
 
     logic [WIDTH-1:0] mem[DEPTH]; // 16 slots, each 32 bits
@@ -34,5 +34,23 @@ module dma_fifo #(
     logic do_write, do_read;
     assign do_write = wr_en && !full;
     assign do_read = rd_en && !empty;
+
+    // Pointers: Move at each rising clock edge
+    always_ff @(poedge clk or negedge rst_n) begin
+        if (!rst_n) begin
+            wr_ptr <= '0;  // reset: both pointers to slot 0, lap 0
+            rd_ptr <= '0;
+        end else begin
+            if (do_write) wr_ptr <=wr_ptr + 1'b1;  // move to the next slot
+            if (do_read) rd_ptr <= rd_ptr + 1'b1;
+        end
+    end
+
+      // ---------------- Storage: write the slot at each rising clock edge ----------------
+    always_ff @(posedge clk) begin
+      if (do_write) mem[wr_ptr[AW-1:0]] <= wr_data;   // lower 4 bits = slot number
+    end
+    
+
 
 endmodule
