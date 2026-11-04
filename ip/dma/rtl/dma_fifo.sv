@@ -36,7 +36,7 @@ module dma_fifo #(
     assign do_read = rd_en && !empty;
 
     // Pointers: Move at each rising clock edge
-    always_ff @(poedge clk or negedge rst_n) begin
+    always_ff @(posedge clk or negedge rst_n) begin
         if (!rst_n) begin
             wr_ptr <= '0;  // reset: both pointers to slot 0, lap 0
             rd_ptr <= '0;
