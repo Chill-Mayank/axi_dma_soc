@@ -1,13 +1,12 @@
 # AXI DMA Subsystem - Design, Verification and RTL-to-GDS
 
-I am creating a small chip subsystem in which a DMA copies the data between memory locations over the AMBA AXI bus, from sratch using SystemVerilog.
-Then everyfile is verified before commiting to GitHub, screenshots are also attached for reference.
+I am building, from scratch in SystemVerilog, a small chip subsystem in which a DMA copies data between memory locations over the AMBA AXI bus. Every file is verified before it is committed to GitHub, with screenshots as proof.
 
-Then I will take it through synthesis and place-and-route to a GDS layout in a 45nm Technology.
+I will then take the design through synthesis and place-and-route to a GDS layout in 45 nm technology.
 
-I am building this project over my last project where i only built AXI protocol and verified it using UVM testbench.
+This project builds on my previous one, where I built only the AXI protocol and verified it with a UVM testbench.
 
-The main objective of building this project is to learn digital design and verification the it is done in industry.
+The main goal is to learn digital design and verification the way it is done in industry.
 
 ## What this chip will do
 
