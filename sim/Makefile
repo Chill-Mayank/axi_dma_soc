@@ -2,6 +2,7 @@
 # File : sim/Makefile
 # Use  : make xrun TEST=pkg_smoke   (text result)
 #        make gui  TEST=fifo        (SimVision)
+#        tests: pkg_smoke, fifo, mem
 #        make clean                 (delete outputs)
 # ============================================================
 
@@ -19,6 +20,11 @@ pkg_smoke_TOP   := pkg_smoke_tb
 fifo_FILES := -f $(PROJ_ROOT)/ip/dma/dma.f \
               $(PROJ_ROOT)/ip/dma/tb/dma_fifo_tb.sv                         # NEW: FIFO test
 fifo_TOP   := dma_fifo_tb                                                    # NEW
+
+mem_FILES := -f $(PROJ_ROOT)/ip/common/common.f \
+             -f $(PROJ_ROOT)/ip/mem/mem.f \
+             $(PROJ_ROOT)/ip/mem/tb/axi_mem_tb.sv
+mem_TOP   := axi_mem_tb
 
 FILES := $($(TEST)_FILES)
 TOP   := $($(TEST)_TOP)

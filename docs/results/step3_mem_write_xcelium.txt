@@ -1,0 +1,100 @@
+xrun(64): 20.09-s012: (c) Copyright 1995-2021 Cadence Design Systems, Inc.
+TOOL:	xrun(64)	20.09-s012: Started on Nov 19, 2026 at 18:12:44 IST
+xrun
+	-sv
+	-timescale 1ns/1ps
+	-licqueue
+	-nowarn DLCVAR
+	-nowarn DLCPTH
+	-svseed 1
+	-cdslib /home/guest1/mayank_verification/axi_dma_soc/sim/cds.lib
+	-hdlvar /home/guest1/mayank_verification/axi_dma_soc/sim/hdl.var
+	-f /home/guest1/mayank_verification/axi_dma_soc/ip/common/common.f
+		/home/guest1/mayank_verification/axi_dma_soc/ip/common/rtl/soc_pkg.sv
+	-f /home/guest1/mayank_verification/axi_dma_soc/ip/mem/mem.f
+		/home/guest1/mayank_verification/axi_dma_soc/ip/mem/rtl/axi_mem.sv
+	/home/guest1/mayank_verification/axi_dma_soc/ip/mem/tb/axi_mem_tb.sv
+	-top axi_mem_tb
+	-l xrun.log
+file: /home/guest1/mayank_verification/axi_dma_soc/ip/common/rtl/soc_pkg.sv
+	package worklib.soc_pkg:sv
+		errors: 0, warnings: 0
+file: /home/guest1/mayank_verification/axi_dma_soc/ip/mem/rtl/axi_mem.sv
+	module worklib.axi_mem:sv
+		errors: 0, warnings: 0
+file: /home/guest1/mayank_verification/axi_dma_soc/ip/mem/tb/axi_mem_tb.sv
+	module worklib.axi_mem_tb:sv
+		errors: 0, warnings: 0
+	Elaborating the design hierarchy:
+		Caching library 'worklib' ....... Done
+	Top level design units:
+		soc_pkg
+		axi_mem_tb
+xmelab: *W,DSEMEL: This SystemVerilog design will be simulated as per IEEE 1800-2009 SystemVerilog simulation semantics. Use -disable_sem2009 option for turning off SV 2009 simulation semantics.
+	Building instance overlay tables: .................... Done
+	Generating native compiled code:
+		worklib.axi_mem_tb:sv <0x413630af>
+			streams:  32, words: 62123
+		worklib.axi_mem:sv <0x13df6904>
+			streams:  14, words:  6918
+		worklib.soc_pkg:sv <0x521f5ada>
+			streams:   0, words:     0
+	Building instance specific data structures.
+	Loading native compiled code:     .................... Done
+	Design hierarchy summary:
+		                 Instances  Unique
+		Modules:                 2       2
+		Verilog packages:        1       1
+		Registers:             107     107
+		Scalar wires:           18       -
+		Vectored wires:         13       -
+		Always blocks:           4       4
+		Initial blocks:          5       5
+		Parallel blocks:         1       1
+		Cont. assignments:       6       8
+		Pseudo assignments:     17      17
+		Simulation timescale:  1ps
+	Writing initial simulation snapshot: worklib.axi_mem_tb:sv
+Loading snapshot worklib.axi_mem_tb:sv .................... Done
+SVSEED set from command line: 1
+xmsim: *W,RNDXCELON: A newer version of the SystemVerilog constraint solver is being used which has better support for array-solving, new solve-order mechanism, and seed stability enhancements..
+xmsim: *W,DSEM2009: This SystemVerilog design is simulated as per IEEE 1800-2009 SystemVerilog simulation semantics. Use -disable_sem2009 option for turning off SV 2009 simulation semantics.
+xcelium> source /home/install/XCELIUM2009/tools/xcelium/files/xmsimrc
+xcelium> run
+Test 1: fill all 256 bytes (one 64-beat INCR burst)
+  [OK]   every byte holds the fill pattern
+Test 2: INCR burst, 4 beats from 0x10
+  [OK]   beats went to 0x10, 0x14, 0x18, 0x1C
+Test 3: byte strobes (write only bytes 0 and 2 at 0x20)
+  [OK]   only bytes 0 and 2 changed
+Test 4: FIXED burst, 4 beats to 0x30
+  [OK]   all beats hit 0x30; the last one stays
+Test 5: WRAP burst, 4 beats from 0x48
+  [OK]   beats went to 0x48, 0x4C, 0x40, 0x44
+Test 6: narrow burst, 4 one-byte beats from 0x50
+  [OK]   bytes C0..C3 landed at 0x50..0x53
+Test 7: high address 0x0000_1060 (memory repeats every 256 bytes)
+  [OK]   data landed at 0x60
+Test 8: W data arrives before the address
+  [OK]   data waited for the address, then landed at 0x70..0x7C
+Test 9: slow BREADY (memory must hold the answer)
+  [OK]   BVALID stayed high for 4 clocks; data at 0x80
+Test 10: longest burst, 256 beats (wraps the memory 4 times)
+  [OK]   the last 64 beats are what remains
+Test 11: 300 random bursts (length, type, strobes, delays)
+  [OK]   memory matches the model after 300 random bursts
+Coverage of the random test:
+  [COV]  INCR bursts                        hit 102 times
+  [COV]  FIXED bursts                       hit 87 times
+  [COV]  WRAP bursts                        hit 111 times
+  [COV]  single-beat bursts                 hit 13 times
+  [COV]  16-beat bursts                     hit 31 times
+  [COV]  address sent late (W first)        hit 160 times
+  [COV]  slow BREADY                        hit 160 times
+  [COV]  partial byte strobes               hit 299 times
+  [COV]  address above 255 (repeat)         hit 300 times
+PASS
+Simulation complete via $finish(1) at time 61920 NS + 0
+/home/guest1/mayank_verification/axi_dma_soc/ip/mem/tb/axi_mem_tb.sv:294     $finish;
+xcelium> exit
+TOOL:	xrun(64)	20.09-s012: Exiting on Nov 19, 2026 at 18:12:53 IST  (total: 00:00:09)
