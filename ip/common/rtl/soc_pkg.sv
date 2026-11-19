@@ -6,11 +6,12 @@ package soc_pkg;
 
   localparam int DATA_W = 32;  // bits per data beat (4bytes)
   localparam int STRB_W = DATA_W/8; // one write-strobe bit per byte -4
-  localparam int ADDR_W = 8; // address bits > 2^8 = 256 bytes
+  localparam int ADDR_W = 32; // AXI address bits, like real systems (AxADDR)
   localparam int ID_W = 4; // transaction ID bits (AxID)
 
 // Memory
-  localparam int MEM_BYTES = 1 << ADDR_W; // 256 bytes
+  localparam int MEM_ADDR_W = 8; // the memory uses only the low 8 address bits
+  localparam int MEM_BYTES = 1 << MEM_ADDR_W; // 256 bytes (repeats every 256 addresses)
   localparam int MEM_WORDS = MEM_BYTES /STRB_W; // 64 words out of 32 bits
 
 // DMA

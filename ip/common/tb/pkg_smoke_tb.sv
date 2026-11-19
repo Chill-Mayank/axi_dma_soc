@@ -1,7 +1,6 @@
 // Print soc_pkg settings and checks them against AXI specs
 
 module pkg_smoke_tb;
-  
   import soc_pkg::*; // import the package
 
   int errors = 0; // error counter
@@ -15,8 +14,8 @@ module pkg_smoke_tb;
   endtask
 
    initial begin
-     $display(" soc_pkg setttings ");
-     $display(" DATA_W = %0d, ADDR_W = %0d, memory = %0d bytes", DATA_W, ADDR_W, MEM_BYTES);
+     $display(" soc_pkg settings ");
+     $display(" DATA_W = %0d, ADDR_W = %0d, MEM_ADDR_W = %0d, memory = %0d bytes", DATA_W, ADDR_W, MEM_ADDR_W, MEM_BYTES);
      $display(" MAX_BURST_BEATS = %0d, FIFO_DEPTH = %0d", MAX_BURST_BEATS, FIFO_DEPTH);
 
      $display(" rule check ");
@@ -25,6 +24,8 @@ module pkg_smoke_tb;
      check(FIFO_DEPTH >= MAX_BURST_BEATS, "FIFO can hold a whole burst");
      check(MAX_BURST_BEATS * STRB_W <= BOUNDARY_BYTES, " one burst fits in 4KB");
      check((1 << SIZE_FULL) == STRB_W, "AxSIZE code matches bus width");
+     check(MEM_ADDR_W <= ADDR_W, "memory fits inside the address space");
+     check(ADDR_W > $clog2(BOUNDARY_BYTES), "address space is bigger than 4KB, so the 4KB rule can be tested");
 
      if (errors == 0) $display("PASS");
      else $display("FAIL: %0d check(s) failed", errors);

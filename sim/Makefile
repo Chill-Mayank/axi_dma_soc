@@ -8,8 +8,9 @@
 export PROJ_ROOT ?= $(abspath ..)
 TEST ?= pkg_smoke
 SEED ?= 1
-XRUN_FLAGS := -sv -timescale 1ns/1ps -licqueue -nowarn DLCVAR -nowarn DLCPTH -svseed $(SEED)
-
+XRUN_FLAGS := -sv -timescale 1ns/1ps -licqueue -nowarn DLCVAR -nowarn DLCPTH -svseed $(SEED) \
+              -cdslib $(PROJ_ROOT)/sim/cds.lib -hdlvar $(PROJ_ROOT)/sim/hdl.var
+			  
 # ---- Test table: files and top module of each test ----
 pkg_smoke_FILES := -f $(PROJ_ROOT)/ip/common/common.f \
                    $(PROJ_ROOT)/ip/common/tb/pkg_smoke_tb.sv
