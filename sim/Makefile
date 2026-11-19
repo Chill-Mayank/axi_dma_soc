@@ -30,6 +30,11 @@ FILES := $($(TEST)_FILES)
 TOP   := $($(TEST)_TOP)
 OUT   := out/$(TEST)
 
+# Stop early with a clear message if the test name is unknown
+ifeq ($(strip $(TOP)),)
+$(error Unknown TEST '$(TEST)'. Known tests: pkg_smoke fifo mem)
+endif
+
 .PHONY: xrun gui clean
 
 xrun:
@@ -42,4 +47,3 @@ gui:
 
 clean:
 	rm -rf out
-	
