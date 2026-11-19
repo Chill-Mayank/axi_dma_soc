@@ -1,13 +1,12 @@
 # AXI DMA Subsystem - Design, Verification and RTL-to-GDS
 
-I am creating a small chip subsystem in which a DMA copies the data between memory locations over the AMBA AXI bus, from sratch using SystemVerilog.
-Then everyfile is verified before commiting to GitHub, screenshots are also attached for reference.
+I am building, from scratch in SystemVerilog, a small chip subsystem in which a DMA copies data between memory locations over the AMBA AXI bus. Every file is verified before it is committed to GitHub, with screenshots as proof.
 
-Then I will take it through synthesis and place-and-route to a GDS layout in a 45nm Technology.
+I will then take the design through synthesis and place-and-route to a GDS layout in 45 nm technology.
 
-I am building this project over my last project where i only built AXI protocol and verified it using UVM testbench.
+This project builds on my previous one, where I built only the AXI protocol and verified it with a UVM testbench.
 
-The main objective of building this project is to learn digital design and verification the it is done in industry.
+The main goal is to learn digital design and verification the way it is done in industry.
 
 ## What this chip will do
 
@@ -17,14 +16,14 @@ A round-robin arbiter lets two masters share one AXI memory.
 
 **RULEBOOK:** I am using AMBA AXI Protocol specification, ARM IHI 0022 Issue L (2025).
 
-The design uses the core AXI feature set with optional AXI5 extentions switched off.
+The design uses the core AXI feature set with optional AXI5 extensions switched off.
 
 ## BLOCKS
 
 | Block | Job | Status |
 |---|---|---|
 | `soc_pkg` | All sizes and AXI code numbers in one place | ✅ done |
-| FIFO | Buffer between the read and write sides | next |
+| FIFO | Buffer between the read and write sides | ✅ done |
 | AXI interface | Standard bundle of the AXI wires | planned |
 | AXI memory | 256-byte AXI subordinate (the "warehouse") | planned |
 | DMA read channel | Issues AR requests, collects R data | planned |
@@ -41,7 +40,7 @@ The design uses the core AXI feature set with optional AXI5 extentions switched 
 | Step | What | Status |
 |---|---|---|
 | 1 | Project setup, settings package, run flow | ✅ done ([notes](docs/step1.md)) |
-| 2 | FIFO + unit test | next |
+| 2 | FIFO + unit test | ✅ done ([notes](docs/step2.md)) |
 | 3 | AXI interface + memory subordinate + assertions | planned |
 | 4 | DMA read channel, write channel, control FSM | planned |
 | 5 | AXI-Lite registers + interrupt | planned |
@@ -77,7 +76,9 @@ make clean                      # delete simulation outputs
 ip/common/rtl/   shared settings package (soc_pkg.sv)
 ip/common/tb/    tests for the common block
 ip/common/       common.f file list
-sim/             Makefile, setup.csh, outputs (sim/out, not committed)
+ip/dma/rtl/      DMA blocks (dma_fifo.sv so far)
+ip/dma/tb/       tests for the DMA blocks
+sim/             Makefile, setup.csh, run_icarus.sh, outputs (sim/out, not committed)
 docs/            notes for each step + screenshots
 ```
 

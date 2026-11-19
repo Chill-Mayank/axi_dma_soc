@@ -7,7 +7,8 @@
 
 export PROJ_ROOT ?= $(abspath ..)
 TEST ?= pkg_smoke
-XRUN_FLAGS := -sv -timescale 1ns/1ps -licqueue -nowarn DLCVAR -nowarn DLCPTH   # NEW: hide lab cds.lib noise
+SEED ?= 1
+XRUN_FLAGS := -sv -timescale 1ns/1ps -licqueue -nowarn DLCVAR -nowarn DLCPTH -svseed $(SEED)
 
 # ---- Test table: files and top module of each test ----
 pkg_smoke_FILES := -f $(PROJ_ROOT)/ip/common/common.f \
@@ -34,3 +35,4 @@ gui:
 
 clean:
 	rm -rf out
+	

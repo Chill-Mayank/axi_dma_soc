@@ -1,5 +1,5 @@
 // Synchronous FIFO between DMA read channel and write channel.
-// First word falls through: rd_data alwas shows the oldest item.
+// First word falls through: rd_data always shows the oldest item.
 
 module dma_fifo #(
     parameter int WIDTH = 32,  // bits per item
@@ -26,6 +26,12 @@ module dma_fifo #(
     // storage and pointers
 
     localparam int AW = $clog2(DEPTH); // slot number bits: 16 slots -> 4
+
+    // The lap-bit trick needs DEPTH = power of 2. Stop the simulation otherwise.
+    // synopsys translate_off
+    initial if (DEPTH < 2 || (DEPTH & (DEPTH - 1)) != 0)
+        $fatal(1, "dma_fifo: DEPTH = %0d is not a power of 2", DEPTH);
+    // synopsys translate_on
 
     logic [WIDTH-1:0] mem[DEPTH]; // 16 slots, each 32 bits
     logic [AW:0] wr_ptr, rd_ptr; // 5 bits = 4 slot bits + 1 lap bit

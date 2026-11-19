@@ -10,7 +10,7 @@ foundation, proved to work on Cadence Xcelium.
 ## 2. What I built
 
 | File | What it does 
-|---|---|---|
+|---|---|
 | `.gitignore` | Tells Git never to save simulator junk, logs, Mac files and editor settings 
 | `ip/common/rtl/soc_pkg.sv` | Package with every size (data width, address width, burst length, FIFO depth) and AXI code numbers 
 | `ip/common/tb/pkg_smoke_tb.sv` | Test that prints the settings and checks them against AXI rules; ends with PASS or FAIL 
