@@ -1,0 +1,64 @@
+xrun(64): 20.09-s012: (c) Copyright 1995-2021 Cadence Design Systems, Inc.
+TOOL:	xrun(64)	20.09-s012: Started on Nov 19, 2026 at 13:04:09 IST
+xrun
+	-sv
+	-timescale 1ns/1ps
+	-licqueue
+	-nowarn DLCVAR
+	-nowarn DLCPTH
+	-svseed 1
+	-cdslib /home/guest1/mayank_verification/axi_dma_soc/sim/cds.lib
+	-hdlvar /home/guest1/mayank_verification/axi_dma_soc/sim/hdl.var
+	-f /home/guest1/mayank_verification/axi_dma_soc/ip/common/common.f
+		/home/guest1/mayank_verification/axi_dma_soc/ip/common/rtl/soc_pkg.sv
+	/home/guest1/mayank_verification/axi_dma_soc/ip/common/tb/pkg_smoke_tb.sv
+	-top pkg_smoke_tb
+	-l xrun.log
+file: /home/guest1/mayank_verification/axi_dma_soc/ip/common/rtl/soc_pkg.sv
+	package worklib.soc_pkg:sv
+		errors: 0, warnings: 0
+file: /home/guest1/mayank_verification/axi_dma_soc/ip/common/tb/pkg_smoke_tb.sv
+	module worklib.pkg_smoke_tb:sv
+		errors: 0, warnings: 0
+	Elaborating the design hierarchy:
+	Top level design units:
+		soc_pkg
+		pkg_smoke_tb
+xmelab: *W,DSEMEL: This SystemVerilog design will be simulated as per IEEE 1800-2009 SystemVerilog simulation semantics. Use -disable_sem2009 option for turning off SV 2009 simulation semantics.
+	Building instance overlay tables: .................... Done
+	Generating native compiled code:
+		worklib.pkg_smoke_tb:sv <0x520eece3>
+			streams:   3, words:  7411
+		worklib.soc_pkg:sv <0x246935ce>
+			streams:   0, words:     0
+	Building instance specific data structures.
+	Loading native compiled code:     .................... Done
+	Design hierarchy summary:
+		                 Instances  Unique
+		Modules:                 1       1
+		Verilog packages:        1       1
+		Registers:               3       3
+		Initial blocks:          2       2
+		Simulation timescale:  1ps
+	Writing initial simulation snapshot: worklib.pkg_smoke_tb:sv
+Loading snapshot worklib.pkg_smoke_tb:sv .................... Done
+SVSEED set from command line: 1
+xmsim: *W,DSEM2009: This SystemVerilog design is simulated as per IEEE 1800-2009 SystemVerilog simulation semantics. Use -disable_sem2009 option for turning off SV 2009 simulation semantics.
+xcelium> source /home/install/XCELIUM2009/tools/xcelium/files/xmsimrc
+xcelium> run
+ soc_pkg settings 
+ DATA_W = 32, ADDR_W = 32, MEM_ADDR_W = 8, memory = 256 bytes
+ MAX_BURST_BEATS = 16, FIFO_DEPTH = 16
+ rule check 
+ [OK] one write strobe per byte
+ [OK] burst length legal for INCR
+ [OK] FIFO can hold a whole burst
+ [OK]  one burst fits in 4KB
+ [OK] AxSIZE code matches bus width
+ [OK] memory fits inside the address space
+ [OK] address space is bigger than 4KB, so the 4KB rule can be tested
+PASS
+Simulation complete via $finish(1) at time 0 FS + 0
+/home/guest1/mayank_verification/axi_dma_soc/ip/common/tb/pkg_smoke_tb.sv:32      $finish;
+xcelium> exit
+TOOL:	xrun(64)	20.09-s012: Exiting on Nov 19, 2026 at 13:04:15 IST  (total: 00:00:06)
