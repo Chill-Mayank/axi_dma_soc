@@ -1,0 +1,99 @@
+xrun(64): 20.09-s012: (c) Copyright 1995-2021 Cadence Design Systems, Inc.
+TOOL:	xrun(64)	20.09-s012: Started on Nov 24, 2026 at 16:04:50 IST
+xrun
+	-sv
+	-timescale 1ns/1ps
+	-licqueue
+	-nowarn DLCVAR
+	-nowarn DLCPTH
+	-svseed 1
+	-cdslib /home/guest1/mayank_verification/axi_dma_soc/sim/cds.lib
+	-hdlvar /home/guest1/mayank_verification/axi_dma_soc/sim/hdl.var
+	-f /home/guest1/mayank_verification/axi_dma_soc/ip/common/common.f
+		/home/guest1/mayank_verification/axi_dma_soc/ip/common/rtl/soc_pkg.sv
+	-f /home/guest1/mayank_verification/axi_dma_soc/ip/mem/mem.f
+		/home/guest1/mayank_verification/axi_dma_soc/ip/mem/rtl/axi_mem.sv
+	/home/guest1/mayank_verification/axi_dma_soc/ip/mem/tb/axi_mem_tb.sv
+	-top axi_mem_tb
+	-l xrun.log
+Loading snapshot worklib.axi_mem_tb:sv .................... Done
+SVSEED set from command line: 1
+xmsim: *W,RNDXCELON: A newer version of the SystemVerilog constraint solver is being used which has better support for array-solving, new solve-order mechanism, and seed stability enhancements..
+xmsim: *W,DSEM2009: This SystemVerilog design is simulated as per IEEE 1800-2009 SystemVerilog simulation semantics. Use -disable_sem2009 option for turning off SV 2009 simulation semantics.
+xcelium> source /home/install/XCELIUM2009/tools/xcelium/files/xmsimrc
+xcelium> run
+Test 1: fill all 256 bytes (one 64-beat INCR burst)
+  [OK]   every byte holds the fill pattern
+Test 2: INCR burst, 4 beats from 0x10
+  [OK]   beats went to 0x10, 0x14, 0x18, 0x1C
+Test 3: byte strobes (write only bytes 0 and 2 at 0x20)
+  [OK]   only bytes 0 and 2 changed
+Test 4: FIXED burst, 4 beats to 0x30
+  [OK]   all beats hit 0x30; the last one stays
+Test 5: WRAP burst, 4 beats from 0x48
+  [OK]   beats went to 0x48, 0x4C, 0x40, 0x44
+Test 6: narrow burst, 4 one-byte beats from 0x50
+  [OK]   bytes C0..C3 landed at 0x50..0x53
+Test 7: high address 0x0000_1060 (memory repeats every 256 bytes)
+  [OK]   data landed at 0x60
+Test 8: W data arrives before the address
+  [OK]   data waited for the address, then landed at 0x70..0x7C
+Test 9: slow BREADY (memory must hold the answer)
+  [OK]   BVALID stayed high for 4 clocks; data at 0x80
+Test 10: longest write, 256 beats (wraps the memory 4 times)
+  [OK]   the last 64 beats are what remains
+Test 11: INCR read, 4 beats from 0x10
+  [OK]   beats came from 0x10, 0x14, 0x18, 0x1C; RLAST on beat 4
+Test 12: FIXED read, 4 beats from 0x30
+  [OK]   all 4 beats came from 0x30
+Test 13: WRAP read, 4 beats from 0x48
+  [OK]   beats came from 0x48, 0x4C, 0x40, 0x44
+Test 14: narrow read, 4 one-byte beats from 0x50
+  [OK]   each byte came on its own lane
+Test 15: read from high address 0x0000_1060
+  [OK]   got the data stored at 0x60
+Test 16: slow RREADY (3 clocks before every beat)
+  [OK]   RVALID and RDATA held steady while RREADY was low
+Test 17: longest read, 256 beats (reads the memory 4 times)
+  [OK]   all 256 beats correct; RLAST only on the last
+Test 18: a 16-beat write and a 16-beat read at the same time
+  [OK]   W and R beats moved in the same clock 16 times
+  [OK]   the write landed at 0x00..0x3C
+Test 19: beats wider than the bus (8 bytes on a 4-byte bus)
+  [OK]   write and read both answered SLVERR (2 beats each); memory unchanged
+Test 20: reserved burst type (AxBURST = 2'b11)
+  [OK]   write and read both answered SLVERR (4 beats each); memory unchanged
+Test 21: WRAP with 3 beats (WRAP allows only 2, 4, 8, 16)
+  [OK]   write and read both answered SLVERR (3 beats each); memory unchanged
+Test 22: WRAP start 0x42 not lined up with 4-byte beats
+  [OK]   write and read both answered SLVERR (4 beats each); memory unchanged
+Test 23: FIXED with 17 beats (FIXED allows at most 16)
+  [OK]   write and read both answered SLVERR (17 beats each); memory unchanged
+Test 24: WLAST also high on the first beat (too early)
+  [OK]   answered SLVERR; all 4 beats still stored at 0x90..0x9C
+Test 25: WLAST missing on the last beat
+  [OK]   answered SLVERR; all 4 beats still stored at 0xA0..0xAC
+Test 26: random writes and reads at the same time (300 + 300 bursts, some wrong on purpose)
+  [OK]   memory matches the model after 600 random bursts
+Coverage of the random test:
+  [COV]  write INCR bursts                    hit 103 times
+  [COV]  write FIXED bursts                   hit 97 times
+  [COV]  write WRAP bursts                    hit 95 times
+  [COV]  read INCR bursts                     hit 102 times
+  [COV]  read FIXED bursts                    hit 87 times
+  [COV]  read WRAP bursts                     hit 108 times
+  [COV]  single-beat bursts                   hit 17 times
+  [COV]  16-beat bursts                       hit 70 times
+  [COV]  beats with partial byte strobes      hit 2176 times
+  [COV]  address sent late (W first)          hit 151 times
+  [COV]  slow BREADY                          hit 150 times
+  [COV]  slow RREADY                          hit 147 times
+  [COV]  W and R beats in the same clock      hit 1017 times
+  [COV]  bad write requests (SLVERR)          hit 21 times
+  [COV]  WLAST mistakes (SLVERR)              hit 17 times
+  [COV]  bad read requests (SLVERR)           hit 24 times
+PASS
+Simulation complete via $finish(1) at time 78940 NS + 0
+/home/guest1/mayank_verification/axi_dma_soc/ip/mem/tb/axi_mem_tb.sv:583     $finish;
+xcelium> exit
+TOOL:	xrun(64)	20.09-s012: Exiting on Nov 24, 2026 at 16:04:58 IST  (total: 00:00:08)

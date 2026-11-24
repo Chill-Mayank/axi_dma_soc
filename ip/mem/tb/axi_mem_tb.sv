@@ -1,13 +1,15 @@
 // ============================================================
 // File : axi_mem_tb.sv
-// What : Self-checking testbench for axi_mem. Part C2: writes AND reads.
+// What : Self-checking testbench for axi_mem: writes, reads, errors.
 //        - A byte-by-byte model of the memory (the answer key)
 //        - Beat addresses from the spec formulas, written in a
 //          different way from the RTL on purpose
 //        - BLACK-BOX: the memory is checked only through its AXI
 //          ports (we read it back), never by looking inside it
-//        - Directed write tests, directed read tests, then random
-//          writes and reads running at the same time, with coverage
+//        - Directed write tests, directed read tests, error tests
+//          (Part D1: requests the memory must answer with SLVERR),
+//          then random writes and reads running at the same time,
+//          some of them wrong on purpose, with coverage
 //        Inputs change on the FALLING clock edge; the memory
 //        acts on the RISING edge.
 // ============================================================
@@ -38,6 +40,22 @@ module axi_mem_tb;
   // ---------------- Answer key ----------------
   logic [7:0] model [MEM_BYTES]; // what each byte SHOULD hold
   int errors = 0;
+
+  // How the write driver sets WLAST
+  localparam int WL_OK      = 0;   // 1 on the last beat only (correct)
+  localparam int WL_EXTRA   = 1;   // ALSO 1 on the first beat (too early: wrong)
+  localparam int WL_MISSING = 2;   // never 1 (missing on the last beat: wrong)
+
+  // Name of a response code, for messages
+  function automatic string resp_name(input logic [1:0] r);
+    case (r)
+      RESP_OKAY:   return "OKAY";
+      RESP_EXOKAY: return "EXOKAY";
+      RESP_SLVERR: return "SLVERR";
+      RESP_DECERR: return "DECERR";
+      default:     return "X";
+    endcase
+  endfunction
 
   task automatic fail(input string msg);
     errors++;
@@ -75,15 +93,20 @@ module axi_mem_tb;
   int w_left = 0;                     // write beats not yet accepted
 
   // One whole write burst: AW and W at the same time, then B.
-  //   aw_wait : clocks before AWVALID rises (so W can go first)
-  //   w_gap   : up to this many idle clocks between W beats
-  //   b_wait  : clocks BREADY stays low after BVALID rises
+  //   aw_wait  : clocks before AWVALID rises (so W can go first)
+  //   w_gap    : up to this many idle clocks between W beats
+  //   b_wait   : clocks BREADY stays low after BVALID rises
+  //   exp_resp : the answer we expect in BRESP (OKAY or SLVERR)
+  //   wl_mode  : WL_OK, or a WLAST mistake made on purpose
   task automatic write_burst(input logic [ID_W-1:0] id, input longint addr,
                              input int len, input int size, input logic [1:0] burst,
-                             input int aw_wait = 0, input int w_gap = 0, input int b_wait = 0);
-    // 1) the answer key: how memory should look afterwards
-    for (int n = 0; n <= len; n++)
-      model_write(beat_addr(addr, size, len, burst, n), beat_data[n], beat_strb[n]);
+                             input int aw_wait = 0, input int w_gap = 0, input int b_wait = 0,
+                             input logic [1:0] exp_resp = RESP_OKAY, input int wl_mode = WL_OK);
+    // 1) the answer key: how memory should look afterwards.
+    //    A bad request stores nothing; a WLAST mistake still stores the data.
+    if (exp_resp == RESP_OKAY || wl_mode != WL_OK)
+      for (int n = 0; n <= len; n++)
+        model_write(beat_addr(addr, size, len, burst, n), beat_data[n], beat_strb[n]);
     w_left = len + 1;
 
     // 2) drive AW and W at the same time
@@ -100,7 +123,12 @@ module axi_mem_tb;
       begin : w_side
         for (int n = 0; n <= len; n++) begin
           repeat ($urandom_range(w_gap)) @(negedge clk);    // sometimes pause between beats
-          wdata = beat_data[n];  wstrb = beat_strb[n];  wlast = (n == len);
+          wdata = beat_data[n];  wstrb = beat_strb[n];
+          case (wl_mode)
+            WL_EXTRA:   wlast = (n == len) || (n == 0);   // also on the first beat
+            WL_MISSING: wlast = 0;                        // never
+            default:    wlast = (n == len);               // correct
+          endcase
           wvalid = 1;
           @(posedge clk); while (!wready) @(posedge clk);  // handshake on this edge
           w_left--;
@@ -120,7 +148,8 @@ module axi_mem_tb;
     bready = 1;
     @(posedge clk);                                         // handshake on this edge
     if (bid   !== id)        fail($sformatf("BID = %0d, expected %0d", bid, id));
-    if (bresp !== RESP_OKAY) fail($sformatf("BRESP = %0d, expected OKAY", bresp));
+    if (bresp !== exp_resp)
+      fail($sformatf("BRESP = %s, expected %s", resp_name(bresp), resp_name(exp_resp)));
     @(negedge clk);
     bready = 0;
     beat_data.delete();
@@ -142,10 +171,12 @@ module axi_mem_tb;
   // the beat are checked (a narrow beat uses fewer lanes).
   //   ar_wait          : clocks before ARVALID rises
   //   r_pmin .. r_pmax : clocks RREADY stays low before each beat
+  //   exp_resp         : OKAY, or SLVERR (then every beat must be 0)
   task automatic read_burst(input logic [ID_W-1:0] id, input longint addr,
                             input int len, input int size, input logic [1:0] burst,
                             input string what,
-                            input int ar_wait = 0, input int r_pmin = 0, input int r_pmax = 0);
+                            input int ar_wait = 0, input int r_pmin = 0, input int r_pmax = 0,
+                            input logic [1:0] exp_resp = RESP_OKAY);
     logic [DATA_W-1:0] held;
     longint a;
     int nb, lo, hi, base, pause;
@@ -171,17 +202,22 @@ module axi_mem_tb;
       end
       rready = 1;
       @(posedge clk);                                       // handshake on this edge
-      a    = beat_addr(addr, size, len, burst, n);
-      nb   = 1 << size;
-      lo   = int'(a % STRB_W);                              // first lane of this beat
-      hi   = int'(((a / nb) * nb) % STRB_W) + nb - 1;       // last lane of this beat
-      base = int'(a % MEM_BYTES) & ~(STRB_W - 1);
-      for (int i = lo; i <= hi; i++)
-        if (rdata[8*i +: 8] !== model[base + i])
-          rd_fail($sformatf("%s: beat %0d from 0x%0h, lane %0d = %h, expected %h",
-                            what, n, a, i, rdata[8*i +: 8], model[base + i]));
-      if (rid   !== id)        rd_fail($sformatf("%s: RID = %0d, expected %0d", what, rid, id));
-      if (rresp !== RESP_OKAY) rd_fail($sformatf("%s: RRESP = %0d, expected OKAY", what, rresp));
+      if (exp_resp == RESP_OKAY) begin                      // good read: compare data
+        a    = beat_addr(addr, size, len, burst, n);
+        nb   = 1 << size;
+        lo   = int'(a % STRB_W);                            // first lane of this beat
+        hi   = int'(((a / nb) * nb) % STRB_W) + nb - 1;     // last lane of this beat
+        base = int'(a % MEM_BYTES) & ~(STRB_W - 1);
+        for (int i = lo; i <= hi; i++)
+          if (rdata[8*i +: 8] !== model[base + i])
+            rd_fail($sformatf("%s: beat %0d from 0x%0h, lane %0d = %h, expected %h",
+                              what, n, a, i, rdata[8*i +: 8], model[base + i]));
+      end
+      else if (rdata !== '0)                                // bad read: zeros only
+        rd_fail($sformatf("%s: beat %0d RDATA = %h, expected 0 (error beat)", what, n, rdata));
+      if (rid   !== id)       rd_fail($sformatf("%s: RID = %0d, expected %0d", what, rid, id));
+      if (rresp !== exp_resp) rd_fail($sformatf("%s: RRESP = %s on beat %0d, expected %s",
+                                                what, resp_name(rresp), n, resp_name(exp_resp)));
       if (rlast !== (n == len))
         rd_fail($sformatf("%s: RLAST = %0b on beat %0d of %0d", what, rlast, n, len + 1));
       @(negedge clk);
@@ -203,6 +239,26 @@ module axi_mem_tb;
     if (errors == err_start) $display("  [OK]   %s", what);
   endtask
 
+  // A request the memory does not support, sent as a write AND as a read.
+  // The write must be answered SLVERR and store nothing; the read must
+  // give ALL its beats, each with RRESP = SLVERR and RDATA = 0.
+  task automatic bad_request_test(input int test_no, input longint addr,
+                                  input int len, input int size, input logic [1:0] burst);
+    int err_start;
+    logic [ID_W-1:0] id;
+    id = ID_W'(test_no);                                     // AXI tag (only 4 bits)
+    err_start = errors;
+    for (int n = 0; n <= len; n++) begin
+      beat_data.push_back(32'hDEAD_0000 + n);  beat_strb.push_back('1);
+    end
+    write_burst(id, addr, len, size, burst, 0, 0, 0, RESP_SLVERR);
+    check_mem($sformatf("Test %0d memory check", test_no), 0);   // nothing may have changed
+    read_burst(id, addr, len, size, burst, $sformatf("Test %0d read", test_no),
+               0, 0, 0, RESP_SLVERR);
+    ok_if_clean(err_start, $sformatf("write and read both answered SLVERR (%0d beats each); memory unchanged",
+                                     len + 1));
+  endtask
+
   // ---------------- Rule checks, every clock ----------------
   // B must not come before the last W beat; R must not come without a read
   always @(posedge clk)
@@ -221,6 +277,7 @@ module axi_mem_tb;
   // ---------------- Coverage counters ----------------
   int cov_w_incr, cov_w_fixed, cov_w_wrap, cov_r_incr, cov_r_fixed, cov_r_wrap;
   int cov_single, cov_max, cov_part_strb, cov_w_first, cov_b_wait, cov_r_wait;
+  int cov_w_bad, cov_wlast_bad, cov_r_bad;
   int same_clk = 0;      // clocks with a W beat AND an R beat (both sides working at once)
 
   always @(posedge clk)
@@ -249,15 +306,46 @@ module axi_mem_tb;
     addr = {$urandom} & 32'hFFFF_FF00;                            // any 256-byte block
     addr = addr + base
          + $urandom_range((burst == BURST_INCR) ? 31 - len : 31) * STRB_W;
+  endtask
+
+  // Turn a good burst into one the memory does not support (5 kinds).
+  // It stays inside the same half of the memory.
+  task automatic make_bad(inout longint addr, inout int len, inout int size,
+                          inout logic [1:0] burst);
+    case ($urandom_range(4))
+      0:       size = SIZE_FULL + 1;                          // 8-byte beats, 4-byte bus
+      1:       burst = 2'b11;                                 // reserved burst type
+      2:       begin burst = BURST_WRAP;  len = 2;  end       // WRAP with 3 beats
+      3:       begin burst = BURST_WRAP;  len = 3;  addr = addr | 2;  end  // WRAP start not lined up
+      default: begin burst = BURST_FIXED; len = 16; end       // FIXED with 17 beats
+    endcase
+  endtask
+
+  // Count burst lengths (after any change by make_bad)
+  task automatic count_len(input int len);
     if (len == 0)                 cov_single++;
     if (len == MAX_BURST_BEATS-1) cov_max++;
   endtask
 
+  // About 1 write in 16 is a bad request, and 1 in 16 has a WLAST mistake
   task automatic random_write(input int base);
     longint addr;
-    int len, aw_wait, b_wait;
-    logic [1:0] burst;
+    int len, size, aw_wait, b_wait, wl_mode;
+    logic [1:0] burst, resp;
     pick_burst(base, addr, len, burst);
+    size = SIZE_FULL;  resp = RESP_OKAY;  wl_mode = WL_OK;
+    case ($urandom_range(15))
+      0: begin
+        make_bad(addr, len, size, burst);
+        resp = RESP_SLVERR;  cov_w_bad++;
+      end
+      1: if (len > 0) begin
+        wl_mode = $urandom_range(1) ? WL_EXTRA : WL_MISSING;
+        resp = RESP_SLVERR;  cov_wlast_bad++;
+      end
+      default: ;
+    endcase
+    count_len(len);
     for (int n = 0; n <= len; n++) begin
       beat_data.push_back($urandom);
       beat_strb.push_back(STRB_W'($urandom));                  // random strobe pattern
@@ -270,21 +358,28 @@ module axi_mem_tb;
     if (burst == BURST_WRAP)  cov_w_wrap++;
     if (aw_wait > 0) cov_w_first++;
     if (b_wait  > 0) cov_b_wait++;
-    write_burst(ID_W'($urandom), addr, len, SIZE_FULL, burst, aw_wait, 2, b_wait);
+    write_burst(ID_W'($urandom), addr, len, size, burst, aw_wait, 2, b_wait, resp, wl_mode);
   endtask
 
+  // About 1 read in 16 is a bad request
   task automatic random_read(input int base);
     longint addr;
-    int len, pmax;
-    logic [1:0] burst;
+    int len, size, pmax;
+    logic [1:0] burst, resp;
     pick_burst(base, addr, len, burst);
+    size = SIZE_FULL;  resp = RESP_OKAY;
+    if ($urandom_range(15) == 0) begin
+      make_bad(addr, len, size, burst);
+      resp = RESP_SLVERR;  cov_r_bad++;
+    end
+    count_len(len);
     pmax = $urandom_range(1) ? 0 : 2;
     if (burst == BURST_INCR)  cov_r_incr++;
     if (burst == BURST_FIXED) cov_r_fixed++;
     if (burst == BURST_WRAP)  cov_r_wrap++;
     if (pmax > 0) cov_r_wait++;
-    read_burst(ID_W'($urandom), addr, len, SIZE_FULL, burst, "random read",
-               $urandom_range(2), 0, pmax);
+    read_burst(ID_W'($urandom), addr, len, size, burst, "random read",
+               $urandom_range(2), 0, pmax, resp);
   endtask
 
   // ---------------- Tests ----------------
@@ -419,9 +514,43 @@ module axi_mem_tb;
                                      same_clk - same_start));
     check_mem("the write landed at 0x00..0x3C");
 
+    // ----- Errors (Part D1): each bad request as a write and a read -----
+    $display("Test 19: beats wider than the bus (8 bytes on a 4-byte bus)");
+    bad_request_test(19, 'h00, 1, SIZE_FULL + 1, BURST_INCR);
+
+    $display("Test 20: reserved burst type (AxBURST = 2'b11)");
+    bad_request_test(20, 'h10, 3, SIZE_FULL, 2'b11);
+
+    $display("Test 21: WRAP with 3 beats (WRAP allows only 2, 4, 8, 16)");
+    bad_request_test(21, 'h40, 2, SIZE_FULL, BURST_WRAP);
+
+    $display("Test 22: WRAP start 0x42 not lined up with 4-byte beats");
+    bad_request_test(22, 'h42, 3, SIZE_FULL, BURST_WRAP);
+
+    $display("Test 23: FIXED with 17 beats (FIXED allows at most 16)");
+    bad_request_test(23, 'h30, 16, SIZE_FULL, BURST_FIXED);
+
+    $display("Test 24: WLAST also high on the first beat (too early)");
+    err_start = errors;
+    for (int n = 0; n < 4; n++) begin
+      beat_data.push_back(32'h2400_0000 + n);  beat_strb.push_back('1);
+    end
+    write_burst(24, 'h90, 3, SIZE_FULL, BURST_INCR, 0, 0, 0, RESP_SLVERR, WL_EXTRA);
+    check_mem("Test 24 memory check", 0);
+    ok_if_clean(err_start, "answered SLVERR; all 4 beats still stored at 0x90..0x9C");
+
+    $display("Test 25: WLAST missing on the last beat");
+    err_start = errors;
+    for (int n = 0; n < 4; n++) begin
+      beat_data.push_back(32'h2500_0000 + n);  beat_strb.push_back('1);
+    end
+    write_burst(25, 'hA0, 3, SIZE_FULL, BURST_INCR, 0, 0, 0, RESP_SLVERR, WL_MISSING);
+    check_mem("Test 25 memory check", 0);
+    ok_if_clean(err_start, "answered SLVERR; all 4 beats still stored at 0xA0..0xAC");
+
     // 6 rounds. In each round the writer uses one half of the memory
     // and the reader the other half, so every read has a known answer.
-    $display("Test 19: random writes and reads at the same time (300 + 300 bursts)");
+    $display("Test 26: random writes and reads at the same time (300 + 300 bursts, some wrong on purpose)");
     same_start = same_clk;
     for (int round = 0; round < 6; round++) begin
       fork
@@ -445,6 +574,9 @@ module axi_mem_tb;
     show_bin("slow BREADY",                        cov_b_wait);
     show_bin("slow RREADY",                        cov_r_wait);
     show_bin("W and R beats in the same clock",    same_clk - same_start);
+    show_bin("bad write requests (SLVERR)",        cov_w_bad);
+    show_bin("WLAST mistakes (SLVERR)",            cov_wlast_bad);
+    show_bin("bad read requests (SLVERR)",         cov_r_bad);
 
     if (errors == 0) $display("PASS");
     else             $display("FAIL: %0d error(s)", errors);
